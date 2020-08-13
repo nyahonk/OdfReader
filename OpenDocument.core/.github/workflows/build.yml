@@ -1,0 +1,42 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        arch: [x86_64]
+        compiler: [gcc]
+
+    steps:
+      - name: ubuntu install ccache
+        if: startsWith(matrix.os, 'ubuntu')
+        run: sudo apt install ccache
+      - name: macos install ccache
+        if: startsWith(matrix.os, 'macos')
+        run: brew install ccache
+
+      - name: checkout
+        uses: actions/checkout@v2
+
+      - name: ccache
+        uses: actions/cache@v1
+        with:
+          path: ~/.ccache
+          key: ${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.compiler }}-rev1
+
+      - name: cmake
+        run: |
+          mkdir -p build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+      - name: make
+        run: |
+          cd build
+          cmake --build . -- -j4
+
+      - name: test
+        run: build/test/odr_test
